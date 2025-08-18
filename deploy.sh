@@ -3,10 +3,10 @@
 # DreamHost SSH Deployment Script for IDAP System
 # Usage: ./deploy.sh
 
-# Configuration - UPDATE THESE VALUES
-REMOTE_USER="your-dreamhost-username"
-REMOTE_HOST="your-server.dreamhost.com"
-REMOTE_PATH="/home/username/srs.juvisa.org"
+# Configuration - UPDATED FOR DREAMHOST
+REMOTE_USER="japhet"
+REMOTE_HOST="juvisa.org"
+REMOTE_PATH="/home/japhet/srs.juvisa.org"
 LOCAL_BACKEND="./backend"
 LOCAL_FRONTEND="./frontend"
 
@@ -76,7 +76,7 @@ fi
 # Step 4: Run remote setup commands
 echo -e "${YELLOW}🔧 Running remote setup...${NC}"
 ssh $REMOTE_USER@$REMOTE_HOST << 'EOF'
-cd /home/username/srs.juvisa.org
+cd /home/japhet/srs.juvisa.org
 
 echo "📦 Installing PHP dependencies..."
 composer install --no-dev --optimize-autoloader
