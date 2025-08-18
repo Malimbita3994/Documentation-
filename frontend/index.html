@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>IDAP - Intelligent Documentation Automation Platform</title>
+    <meta name="description" content="Professional documentation automation platform for SRS, SDD, Concept Notes, and more" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vanta@0.5.24/dist/vanta.birds.min.js"></script>
+    <style>
+      @property --angle {
+        syntax: "<angle>";
+        inherits: false;
+        initial-value: 91deg;
+      }
+
+      * { box-sizing: border-box; }
+
+      html, body { height: 100%; }
+
+      body {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        background: linear-gradient(180deg, #07131c, #305472);
+        position: relative;
+        font-family: Arial, Helvetica, sans-serif;
+      }
+
+      /* Ensure app content sits above background */
+      #root { position: relative; z-index: 2; }
+
+      /* helper hints (kept behind app content) */
+      body::before,
+      body::after {
+        content: "CLICK & HOLD TO CREATE LIGHTNING";
+        font-size: 12px;
+        position: absolute;
+        width: 100%;
+        text-align: center;
+        bottom: 18px;
+        color: #fff4;
+        z-index: 0;
+      }
+      body::before {
+        content: "HOVER SCREEN TO CHANGE WIND SPEED";
+        top: 18px;
+        bottom: auto;
+      }
+      body:active::before,
+      body:active::after {
+        color: #fff0;
+        transition: all 0.5s ease;
+      }
+
+      /* main container */
+      .rain {
+        position: absolute;
+        width: 120vw;
+        height: 100vh;
+        left: -10vw;
+        top: 0;
+        /* keep UI fully interactive */
+        pointer-events: none;
+        z-index: 1; /* background layer */
+        --angle: 91deg;
+      }
+
+      /* hover zones (three strips on each side) */
+      .rain .left,
+      .rain .right {
+        position: absolute;
+        width: 20vw;
+        height: 100vh;
+        top: 0;
+        z-index: 2;
+        pointer-events: none;
+      }
+
+      .rain .left { left: 10vw; }
+      .rain .left.center { left: 30vw; }
+      .rain .right { right: 10vw; left: auto; }
+      .rain .right.center { right: 30vw; }
+
+      .rain .right::after {
+        content: "△ \A ▽";
+        position: fixed;
+        left: calc(50% - 30px);
+        top: 45px;
+        color: #fff8;
+        font-size: 20px;
+        border: 2px dashed #fff3;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        padding: 13px 18px;
+        text-align: center;
+        line-height: 15px;
+        white-space: pre-wrap;
+        transition: all 0.5s ease;
+      }
+      .rain .right:hover::after { transform: rotate(-22deg); }
+
+      .rain::after {
+        content: "↯";
+        position: fixed;
+        left: calc(50% - 30px);
+        bottom: 45px;
+        color: #fff8;
+        font-size: 35px;
+        border: 2px dashed #fff3;
+        border-radius: 50%;
+        width: 60px;
+        height: 60px;
+        padding: 13px 18px;
+        text-align: center;
+        line-height: 30px;
+        white-space: pre-wrap;
+        transition: all 0.5s ease;
+      }
+
+      .rain:active {
+        cursor: none;
+        animation:
+          lightning 0.1s linear 0s 2,
+          lightning 0.15s ease-out 0.25s 1;
+      }
+      .rain:active::after,
+      .rain:active .right::after {
+        opacity: 0;
+        transition: all 0.5s ease;
+      }
+
+      /* wind controls via sibling combinators */
+      .rain .left:hover ~ .drop { --angle: 105deg; }
+      .rain .left.center:hover ~ .drop { --angle: 95deg; }
+      .rain .right.center:hover ~ .drop { --angle: 85deg; }
+      .rain .right:hover ~ .drop { --angle: 75deg; }
+
+      .drop {
+        position: absolute;
+        top: -5vmin;
+        border: 0.25vmin solid transparent;
+        border-bottom-color: #abc2e9;
+        transform: rotate(var(--angle)) translateX(0);
+        will-change: transform;
+        pointer-events: none;
+        z-index: 1;
+        animation-name: fall;
+        animation-timing-function: ease-in;
+        animation-iteration-count: infinite;
+      }
+
+      @keyframes fall {
+        0%   { transform: rotate(var(--angle)) translateX(0); }
+        100% { transform: rotate(var(--angle)) translateX(calc(100vh + 5vmin)); }
+      }
+
+      @keyframes lightning {
+        50% {
+          background:
+            radial-gradient(circle at calc(50% - 10vw) -20%, #fff4, #fff0 20%),
+            linear-gradient(180deg, #fff9, #fff3);
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="rain" aria-hidden="true">
+      <div class="left"></div>
+      <div class="left center"></div>
+      <div class="right center"></div>
+      <div class="right"></div>
+      <!-- Drops will be injected by script below -->
+    </div>
+    <div id="root"></div>
+    <script>
+      (function() {
+        const N = 500;
+        const rain = document.querySelector('.rain');
+        if (!rain) return;
+
+        const rand = (min, max) => Math.random() * (max - min) + min;
+        const randInt = (min, max) => Math.floor(rand(min, max + 1));
+
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < N; i++) {
+          const d = document.createElement('div');
+          d.className = 'drop';
+          d.style.opacity = (rand(0.01, 0.90)).toFixed(2);
+          d.style.left = `${rand(0, 120)}vw`;
+          d.style.borderLeftWidth = `${rand(0, 8)}vmin`;
+          d.style.animationDuration = `${rand(0.15, 2.25).toFixed(3)}s`;
+          const negDelay = -(randInt(1, 25) * 0.5);
+          d.style.animationDelay = `${negDelay}s`;
+          frag.appendChild(d);
+        }
+        rain.appendChild(frag);
+      })();
+    </script>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
