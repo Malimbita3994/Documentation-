@@ -38,7 +38,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, onClose, onSave }) => {
     is_active: true,
     permission_ids: [] as number[]
   })
-  const [permissions, setPermissions] = useState<Permission[]>([])
+  // const [permissions, setPermissions] = useState<Permission[]>([])
   const [groupedPermissions, setGroupedPermissions] = useState<Record<string, Permission[]>>({})
   const [loading, setLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
@@ -63,10 +63,10 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, onClose, onSave }) => {
       const response = await fetch('/api/permissions/grouped')
       const data = await response.json()
       setGroupedPermissions(data.grouped_permissions)
-      setPermissions(data.grouped_permissions ? 
-        Object.values(data.grouped_permissions).flat() as Permission[] : 
-        []
-      )
+      // setPermissions(data.grouped_permissions ? 
+      //   Object.values(data.grouped_permissions).flat() as Permission[] : 
+      //   []
+      // )
     } catch (error) {
       console.error('Error fetching permissions:', error)
     }

@@ -100,8 +100,8 @@ interface AdvancedModelingToolsProps {
 
 const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
   const [viewMode, setViewMode] = useState<'useCase' | 'sequence' | 'state' | 'dataFlow'>('useCase')
-  const [showCreateModal, setShowCreateModal] = useState(false)
-  const [editingModel, setEditingModel] = useState<any>(null)
+  // const [showCreateModal, setShowCreateModal] = useState(false)
+  // const [editingModel, setEditingModel] = useState<any>(null)
 
   // Local delete function since we're not using props for this demo
   const handleDelete = (id: string) => {
@@ -253,7 +253,7 @@ const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
                 {useCase.priority}
               </span>
               <button
-                onClick={() => setEditingModel(useCase)}
+                onClick={() => {/* setEditingModel(useCase) */}}
                 className="text-blue-600 hover:text-blue-700"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -352,7 +352,7 @@ const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setEditingModel(diagram)}
+                onClick={() => {/* setEditingModel(diagram) */}}
                 className="text-blue-600 hover:text-blue-700"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -430,7 +430,7 @@ const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setEditingModel(state)}
+                onClick={() => {/* setEditingModel(state) */}}
                 className="text-blue-600 hover:text-blue-700"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -508,7 +508,7 @@ const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
             </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setEditingModel(dataFlow)}
+                onClick={() => {/* setEditingModel(dataFlow) */}}
                 className="text-blue-600 hover:text-blue-700"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -593,7 +593,7 @@ const AdvancedModelingTools: React.FC<AdvancedModelingToolsProps> = () => {
         </div>
         <div className="flex items-center gap-2">
           <button
-            onClick={() => setShowCreateModal(true)}
+            onClick={() => {/* setShowCreateModal(true) */}}
             className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
           >
             <PlusIcon className="h-4 w-4" />

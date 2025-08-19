@@ -5,16 +5,12 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "https://your-backend-domain.com/api/$1"
-    },
-    {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "https://srs.juvisa.org/api/$1"
     }
   ],
   "headers": [
     {
-      "source": "/api/(.*)",
+      "source": "/(.*)",
       "headers": [
         {
           "key": "Access-Control-Allow-Origin",
@@ -26,7 +22,7 @@
         },
         {
           "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
+          "value": "Content-Type, Authorization, X-Requested-With"
         }
       ]
     }

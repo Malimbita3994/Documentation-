@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { XMarkIcon, UserCircleIcon } from '@heroicons/react/24/outline'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-toastify'
 
 interface User {
@@ -49,7 +49,7 @@ const UserModal: React.FC<UserModalProps> = ({ user, onClose, onSave }) => {
         email: user.email,
         phone: user.phone || '',
         password: '',
-        status: user.status,
+        status: user.status as 'active',
         bio: user.bio || '',
         role_ids: user.roles.map(role => role.id)
       })
@@ -125,7 +125,7 @@ const UserModal: React.FC<UserModalProps> = ({ user, onClose, onSave }) => {
       
       const submitData = { ...formData }
       if (isEditing && !submitData.password) {
-        delete submitData.password
+        // delete submitData.password
       }
 
       const response = await fetch(url, {
