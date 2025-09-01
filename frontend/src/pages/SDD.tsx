@@ -10,10 +10,16 @@ import {
   ClockIcon,
   UserIcon,
   TagIcon,
-  FunnelIcon
+  FunnelIcon,
+  XMarkIcon,
+  DocumentTextIcon,
+  FolderIcon,
+  DocumentDuplicateIcon
 } from '@heroicons/react/24/outline'
 import { Document } from '../types/index'
-
+import { toast } from 'react-toastify'
+import SDDGenerator from '../services/documentGenerators/SDDGenerator'
+import SDDDocumentViewer from '../components/SDDDocumentViewer'
 import DocumentEditor from '../components/DocumentEditor'
 
 
@@ -23,8 +29,30 @@ const SDDPage: React.FC = () => {
   const [selectedStatus, setSelectedStatus] = useState('')
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [showManualModal, setShowManualModal] = useState(false)
+  const [showAIModal, setShowAIModal] = useState(false)
   const [showDocumentEditor, setShowDocumentEditor] = useState(false)
+  const [showDocumentViewer, setShowDocumentViewer] = useState(false)
   const [currentDocument, setCurrentDocument] = useState<Document | null>(null)
+  const [isGenerating, setIsGenerating] = useState(false)
+  
+  // Form states for manual creation
+  const [manualForm, setManualForm] = useState({
+    title: '',
+    systemName: '',
+    purpose: '',
+    scope: '',
+    industry: 'general'
+  })
+  
+  // Form states for AI generation
+  const [aiForm, setAiForm] = useState({
+    systemRequirements: '',
+    industry: 'general',
+    architectureType: 'layered',
+    includeDiagrams: true,
+    includeTraceability: true
+  })
 
   
 
@@ -98,6 +126,121 @@ const SDDPage: React.FC = () => {
 
 
   // Handle document creation
+  const handleManualCreation = async () => {
+    try {
+      if (!manualForm.title.trim() || !manualForm.systemName.trim()) {
+        toast.error('Please fill in all required fields')
+        return
+      }
+
+      const sddGenerator = new SDDGenerator()
+      const request = {
+        projectId: '1',
+        systemRequirements: `System Name: ${manualForm.systemName}\nPurpose: ${manualForm.purpose}\nScope: ${manualForm.scope}\nIndustry: ${manualForm.industry}`,
+        documentType: 'SDD',
+        additionalSpecs: `Title: ${manualForm.title}\nSystem Name: ${manualForm.systemName}\nPurpose: ${manualForm.purpose}\nScope: ${manualForm.scope}\nIndustry: ${manualForm.industry}`,
+        projectContext: {
+          title: manualForm.title,
+          systemName: manualForm.systemName,
+          purpose: manualForm.purpose,
+          scope: manualForm.scope,
+          industry: manualForm.industry
+        }
+      }
+
+      setIsGenerating(true)
+      const result = await sddGenerator.generateDocument(request)
+      
+      // Add the new document to the list
+      const newDocument = {
+        ...result.document,
+        title: manualForm.title,
+        metadata: {
+          ...result.document.metadata,
+          systemName: manualForm.systemName,
+          purpose: manualForm.purpose,
+          scope: manualForm.scope
+        }
+      }
+      
+      documents.push(newDocument)
+      setShowManualModal(false)
+      setManualForm({ title: '', systemName: '', purpose: '', scope: '', industry: 'general' })
+      toast.success('SDD created successfully!')
+      
+    } catch (error) {
+      console.error('Error creating SDD:', error)
+      toast.error('Failed to create SDD')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleAIGeneration = async () => {
+    try {
+      if (!aiForm.systemRequirements.trim()) {
+        toast.error('Please provide system requirements')
+        return
+      }
+
+      const sddGenerator = new SDDGenerator()
+      const request = {
+        projectId: '1',
+        systemRequirements: aiForm.systemRequirements,
+        documentType: 'SDD',
+        additionalSpecs: `Industry: ${aiForm.industry}\nArchitecture Type: ${aiForm.architectureType}\nInclude Diagrams: ${aiForm.includeDiagrams}\nInclude Traceability: ${aiForm.includeTraceability}`,
+        projectContext: {
+          industry: aiForm.industry,
+          architectureType: aiForm.architectureType,
+          includeDiagrams: aiForm.includeDiagrams,
+          includeTraceability: aiForm.includeTraceability
+        }
+      }
+
+      setIsGenerating(true)
+      const result = await sddGenerator.generateDocument(request)
+      
+      // Add the new document to the list
+      documents.push(result.document)
+      setShowAIModal(false)
+      setAiForm({
+        systemRequirements: '',
+        industry: 'general',
+        architectureType: 'layered',
+        includeDiagrams: true,
+        includeTraceability: true
+      })
+      toast.success('AI-generated SDD created successfully!')
+      
+    } catch (error) {
+      console.error('Error generating SDD with AI:', error)
+      toast.error('Failed to generate SDD with AI')
+    } finally {
+      setIsGenerating(false)
+    }
+  }
+
+  const handleViewDocument = (doc: Document) => {
+    setCurrentDocument(doc)
+    setShowDocumentViewer(true)
+  }
+
+  const handleEditDocument = (doc: Document) => {
+    setCurrentDocument(doc)
+    setShowDocumentEditor(true)
+  }
+
+  const goToSRS = () => {
+    window.location.href = '/srs'
+  }
+
+  const goToProjects = () => {
+    window.location.href = '/projects'
+  }
+
+  const goToDocuments = () => {
+    window.location.href = '/documents'
+  }
 
 
   return (
@@ -118,6 +261,37 @@ const SDDPage: React.FC = () => {
             </p>
             <div className="mt-3 text-green-100 text-sm opacity-75">
               Create comprehensive software design documents with intelligent architecture design, component specification, and deployment planning.
+            </div>
+            {/* Cross-Page Navigation */}
+            <div className="mt-4 flex flex-wrap gap-2">
+              <button 
+                onClick={goToSRS}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
+              >
+                <DocumentTextIcon className="h-4 w-4" />
+                <span>Go to SRS</span>
+              </button>
+              <button 
+                onClick={goToProjects}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
+              >
+                <FolderIcon className="h-4 w-4" />
+                <span>View Projects</span>
+              </button>
+              <button 
+                onClick={goToDocuments}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4" />
+                <span>All Documents</span>
+              </button>
+              <button 
+                onClick={() => window.location.href = '/templates'}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4" />
+                <span>Document Templates</span>
+              </button>
             </div>
           </div>
           <button 
@@ -278,20 +452,14 @@ const SDDPage: React.FC = () => {
             
             <div className="flex gap-2 mt-4">
               <button
-                onClick={() => {
-                  setCurrentDocument(doc)
-                  setShowDocumentEditor(true)
-                }}
+                onClick={() => handleViewDocument(doc)}
                 className="flex-1 bg-green-50 hover:bg-green-100 text-green-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <EyeIcon className="h-4 w-4" />
                 View
               </button>
               <button
-                onClick={() => {
-                  setCurrentDocument(doc)
-                  setShowDocumentEditor(true)
-                }}
+                onClick={() => handleEditDocument(doc)}
                 className="flex-1 bg-gray-50 hover:bg-gray-100 text-gray-700 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 flex items-center justify-center gap-2"
               >
                 <PencilIcon className="h-4 w-4" />
@@ -304,7 +472,7 @@ const SDDPage: React.FC = () => {
 
       {/* Modals */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]" style={{ zIndex: 99999 }}>
           <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Create New SDD</h2>
             <p className="text-gray-600 mb-6">
@@ -313,8 +481,8 @@ const SDDPage: React.FC = () => {
             <div className="flex gap-4">
               <button
                 onClick={() => {
-                  // Handle manual creation
                   setShowCreateModal(false)
+                  setShowManualModal(true)
                 }}
                 className="flex-1 bg-green-600/90 hover:bg-green-700/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 backdrop-blur-sm"
               >
@@ -322,8 +490,8 @@ const SDDPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  // Handle AI generation
                   setShowCreateModal(false)
+                  setShowAIModal(true)
                 }}
                 className="flex-1 bg-green-600/90 hover:bg-green-700/90 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 backdrop-blur-sm"
               >
@@ -340,6 +508,243 @@ const SDDPage: React.FC = () => {
         </div>
       )}
 
+      {/* Manual Creation Modal */}
+      {showManualModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]" style={{ zIndex: 99999 }}>
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Create SDD Manually</h2>
+              <button
+                onClick={() => setShowManualModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Document Title *
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.title}
+                  onChange={(e) => setManualForm({...manualForm, title: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  placeholder="Enter SDD title"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  System Name *
+                </label>
+                <input
+                  type="text"
+                  value={manualForm.systemName}
+                  onChange={(e) => setManualForm({...manualForm, systemName: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  placeholder="Enter system name"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Purpose
+                </label>
+                <textarea
+                  value={manualForm.purpose}
+                  onChange={(e) => setManualForm({...manualForm, purpose: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  rows={3}
+                  placeholder="Describe the purpose of the system"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Scope
+                </label>
+                <textarea
+                  value={manualForm.scope}
+                  onChange={(e) => setManualForm({...manualForm, scope: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  rows={3}
+                  placeholder="Describe the scope of the system"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Industry
+                </label>
+                <select
+                  value={manualForm.industry}
+                  onChange={(e) => setManualForm({...manualForm, industry: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                >
+                  <option value="general">General</option>
+                  <option value="healthcare">Healthcare</option>
+                  <option value="finance">Finance</option>
+                  <option value="education">Education</option>
+                  <option value="ecommerce">E-commerce</option>
+                  <option value="manufacturing">Manufacturing</option>
+                  <option value="government">Government</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-8">
+              <button
+                onClick={() => setShowManualModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleManualCreation}
+                disabled={isGenerating || !manualForm.title.trim() || !manualForm.systemName.trim()}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline"></div>
+                    Creating...
+                  </>
+                ) : (
+                  'Create SDD'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* AI Generation Modal */}
+      {showAIModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[99999]" style={{ zIndex: 99999 }}>
+          <div className="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-6">
+              <h2 className="text-2xl font-bold text-gray-900">Generate SDD with AI</h2>
+              <button
+                onClick={() => setShowAIModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <XMarkIcon className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  System Requirements *
+                </label>
+                <textarea
+                  value={aiForm.systemRequirements}
+                  onChange={(e) => setAiForm({...aiForm, systemRequirements: e.target.value})}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  rows={6}
+                  placeholder="Describe the system requirements, functionality, and key features..."
+                />
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Industry
+                  </label>
+                  <select
+                    value={aiForm.industry}
+                    onChange={(e) => setAiForm({...aiForm, industry: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  >
+                    <option value="general">General</option>
+                    <option value="healthcare">Healthcare</option>
+                    <option value="finance">Finance</option>
+                    <option value="education">Education</option>
+                    <option value="ecommerce">E-commerce</option>
+                    <option value="manufacturing">Manufacturing</option>
+                    <option value="government">Government</option>
+                  </select>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Architecture Type
+                  </label>
+                  <select
+                    value={aiForm.architectureType}
+                    onChange={(e) => setAiForm({...aiForm, architectureType: e.target.value})}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500/20 focus:border-green-500 transition-all duration-200"
+                  >
+                    <option value="layered">Layered Architecture</option>
+                    <option value="microservices">Microservices</option>
+                    <option value="event-driven">Event-Driven</option>
+                    <option value="service-oriented">Service-Oriented</option>
+                    <option value="monolithic">Monolithic</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="space-y-3">
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="includeDiagrams"
+                    checked={aiForm.includeDiagrams}
+                    onChange={(e) => setAiForm({...aiForm, includeDiagrams: e.target.checked})}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="includeDiagrams" className="ml-2 text-sm text-gray-700">
+                    Include architecture diagrams
+                  </label>
+                </div>
+                
+                <div className="flex items-center">
+                  <input
+                    type="checkbox"
+                    id="includeTraceability"
+                    checked={aiForm.includeTraceability}
+                    onChange={(e) => setAiForm({...aiForm, includeTraceability: e.target.checked})}
+                    className="h-4 w-4 text-green-600 focus:ring-green-500 border-gray-300 rounded"
+                  />
+                  <label htmlFor="includeTraceability" className="ml-2 text-sm text-gray-700">
+                    Include traceability matrix
+                  </label>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 mt-8">
+              <button
+                onClick={() => setShowAIModal(false)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-medium transition-all duration-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAIGeneration}
+                disabled={isGenerating || !aiForm.systemRequirements.trim()}
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isGenerating ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2 inline"></div>
+                    Generating...
+                  </>
+                ) : (
+                  <>
+                    <SparklesIcon className="h-5 w-5 mr-2 inline" />
+                    Generate with AI
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Document Editor */}
       {showDocumentEditor && currentDocument && (
         <DocumentEditor
@@ -352,6 +757,26 @@ const SDDPage: React.FC = () => {
             console.log('Document saved:', updatedDoc)
             setShowDocumentEditor(false)
             setCurrentDocument(null)
+          }}
+        />
+      )}
+
+      {/* Document Viewer */}
+      {showDocumentViewer && currentDocument && (
+        <SDDDocumentViewer
+          document={currentDocument}
+          onClose={() => {
+            setShowDocumentViewer(false)
+            setCurrentDocument(null)
+          }}
+          onSave={async (updatedDocument) => {
+            // In a real app, you would save to backend here
+            console.log('Document saved:', updatedDocument)
+            toast.success('Document saved successfully!')
+          }}
+          onEdit={(document) => {
+            console.log('Editing document:', document)
+            // Handle edit mode
           }}
         />
       )}

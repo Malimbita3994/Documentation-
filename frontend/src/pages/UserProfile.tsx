@@ -11,6 +11,8 @@ import {
   XMarkIcon
 } from '@heroicons/react/24/outline'
 import { classNames } from '@/lib/utils'
+import { env } from '@/config/environment'
+import { useAuth } from '@/contexts/AuthContext'
 
 interface UserProfile {
   id: number
@@ -43,8 +45,10 @@ interface UserProfile {
 }
 
 const UserProfile: React.FC = () => {
+  const { user, refreshUserData } = useAuth()
   const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState(false)
   const [avatarFile, setAvatarFile] = useState<File | null>(null)
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
@@ -55,13 +59,70 @@ const UserProfile: React.FC = () => {
 
   const fetchProfile = async () => {
     try {
-      const response = await fetch('/api/profile')
+      setLoading(true)
+      setError(null)
+      
+      // Get auth token from localStorage
+      const token = localStorage.getItem('token') || localStorage.getItem('auth_token')
+      
+      if (!token) {
+        setError('No authentication token found. Please log in again.')
+        setLoading(false)
+        return
+      }
+
+      const apiUrl = `${env.API_URL}/profile`
+      
+      const response = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        }
+      })
+
       if (response.ok) {
         const data = await response.json()
         setProfile(data)
+      } else if (response.status === 401) {
+        setError('Authentication failed. Please log in again.')
+      } else {
+        setError(`Failed to load profile: ${response.status} ${response.statusText}`)
       }
     } catch (error) {
       console.error('Error fetching profile:', error)
+      setError('Network error. Please check your connection.')
+      
+      // Fallback to current user data if available
+      if (user) {
+        const fallbackProfile: UserProfile = {
+          id: user.id || 1,
+          name: user.name || 'User',
+          username: user.username || 'user',
+          email: user.email || 'user@example.com',
+          phone: '',
+          avatar: user.avatar || null,
+          bio: '',
+          status: 'active',
+          last_login_at: new Date().toISOString(),
+          last_login_ip: '',
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+          roles: user.roles || [],
+          preferences: {
+            theme: 'light',
+            notifications: {
+              email: true,
+              push: true,
+              sms: false
+            },
+            language: 'en',
+            timezone: 'UTC'
+          }
+        }
+        setProfile(fallbackProfile)
+        setError(null) // Clear error since we have fallback data
+      }
     } finally {
       setLoading(false)
     }
@@ -86,8 +147,17 @@ const UserProfile: React.FC = () => {
     formData.append('avatar', avatarFile)
 
     try {
-      const response = await fetch('/api/profile/avatar', {
+      const token = localStorage.getItem('auth_token')
+      if (!token) {
+        setError('No authentication token found')
+        return
+      }
+
+      const response = await fetch(`${env.API_URL}/profile/avatar`, {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         body: formData
       })
 
@@ -96,6 +166,10 @@ const UserProfile: React.FC = () => {
         setProfile(prev => prev ? { ...prev, avatar: data.avatar_url } : null)
         setAvatarFile(null)
         setAvatarPreview(null)
+        // Refresh user data to update avatar in header
+        refreshUserData()
+      } else {
+        setError('Failed to upload avatar')
       }
     } catch (error) {
       console.error('Error uploading avatar:', error)
@@ -164,6 +238,45 @@ const UserProfile: React.FC = () => {
         <h1 className="text-3xl font-bold text-gray-900">User Profile</h1>
         <p className="text-gray-600 mt-2">Manage your account settings and preferences</p>
       </div>
+
+      {/* Loading State */}
+      {loading && (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+          <span className="ml-3 text-gray-600">Loading profile...</span>
+        </div>
+      )}
+
+
+
+      {/* Error State */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+          <div className="flex items-center">
+            <XMarkIcon className="h-5 w-5 text-red-400 mr-2" />
+            <span className="text-red-800">{error}</span>
+          </div>
+          <div className="mt-2 space-x-2">
+            <button
+              onClick={fetchProfile}
+              className="text-sm text-red-600 hover:text-red-800 underline"
+            >
+              Try again
+            </button>
+            {!user && (
+              <a
+                href="/login"
+                className="text-sm text-blue-600 hover:text-blue-800 underline"
+              >
+                Go to Login
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Content - Only show if not loading and no error */}
+      {!loading && !error && (
 
       <Tab.Group>
         <Tab.List className="flex space-x-1 rounded-xl bg-blue-900/20 p-1 mb-8">
@@ -334,6 +447,7 @@ const UserProfile: React.FC = () => {
           </Tab.Panel>
         </Tab.Panels>
       </Tab.Group>
+      )}
     </div>
   )
 }

@@ -16,9 +16,14 @@ backend/storage/*
 !backend/storage/.gitignore
 backend/public/storage/
 
+# Backend database (SQLite)
+backend/database/*.sqlite
+backend/database/*.sqlite3
+
 # Frontend (Vite/React)
 frontend/node_modules/
 frontend/dist/
+frontend/dist-upload/
 
 # Logs
 *.log

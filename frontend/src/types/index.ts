@@ -142,29 +142,41 @@ export type RequirementStatus =
 export interface Project {
   id: string
   name: string
-  purpose: string
-  scope: string
-  objectives: string[]
-  stakeholders: string[]
-  projectSponsor: string
-  budget: string
-  timeline: ProjectTimeline
-  technologyStack: string[]
-  deliverables: string[]
-  successCriteria: string[]
-  constraints: string[]
-  dependencies: string[]
-  risks: ProjectRisk[]
-  qualityStandards: string[]
-  securityRequirements: string[]
-  changeManagement: string
+  description?: string
   status: ProjectStatus
-  manager: string
-  team: ProjectMember[]
-  documents: string[] // Document IDs
-  requirements: string[] // Requirement IDs
-  createdAt: string
-  updatedAt: string
+  start_date?: string
+  end_date?: string
+  manager_id?: number
+  manager?: {
+    id: number
+    name: string
+    email: string
+  }
+  team?: ProjectMember[]
+  documents?: string[] // Document IDs
+  requirements?: string[] // Requirement IDs
+  created_at?: string
+  updated_at?: string
+  
+  // Frontend-specific fields (for backward compatibility)
+  purpose?: string
+  scope?: string
+  objectives?: string[]
+  stakeholders?: string[]
+  projectSponsor?: string
+  budget?: string
+  timeline?: ProjectTimeline
+  technologyStack?: string[]
+  deliverables?: string[]
+  successCriteria?: string[]
+  constraints?: string[]
+  dependencies?: string[]
+  risks?: ProjectRisk[]
+  qualityStandards?: string[]
+  securityRequirements?: string[]
+  changeManagement?: string
+  createdAt?: string
+  updatedAt?: string
 }
 
 export interface ProjectTimeline {

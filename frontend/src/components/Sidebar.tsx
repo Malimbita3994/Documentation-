@@ -5,7 +5,6 @@ import {
   FolderIcon,
   DocumentTextIcon,
   DocumentDuplicateIcon,
-
   ChartBarIcon,
   UserGroupIcon,
   Cog6ToothIcon,
@@ -118,7 +117,13 @@ const Sidebar: React.FC = () => {
       description: 'Document templates',
       badge: null
     },
-
+    { 
+      name: 'QR Code Generator', 
+      href: '/qr-generator', 
+      icon: DocumentTextIcon, 
+      description: 'Generate QR codes',
+      badge: 'NEW'
+    },
     { 
       name: 'Analytics', 
       href: '/analytics', 

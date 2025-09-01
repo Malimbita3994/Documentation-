@@ -14,6 +14,7 @@ export interface SRSMetadata {
   lastModified: string
   status: 'draft' | 'review' | 'approved' | 'baseline'
   domain: string
+  industry: string
   compliance: string[]
   stakeholders: string[]
   approvalChain: string[]
@@ -927,6 +928,7 @@ export const defaultSRSMetadata: SRSMetadata = {
   lastModified: new Date().toISOString(),
   status: 'draft',
   domain: 'education',
+  industry: 'general',
   compliance: ['IEEE 29148-2018'],
   stakeholders: [],
   approvalChain: []

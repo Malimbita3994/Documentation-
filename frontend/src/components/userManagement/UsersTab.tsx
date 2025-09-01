@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { 
   PlusIcon, 
   MagnifyingGlassIcon, 
-  FunnelIcon,
+  // FunnelIcon,
   PencilIcon,
   TrashIcon,
   EyeIcon,
@@ -71,7 +71,7 @@ const UsersTab: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      const response = await fetch(`/api/users?${params}`, { headers })
+              const response = await fetch(`http://localhost:8000/api/users?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch users')
@@ -97,7 +97,7 @@ const UsersTab: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      const response = await fetch('/api/roles', { headers })
+              const response = await fetch('http://localhost:8000/api/roles', { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch roles')
@@ -137,7 +137,7 @@ const UsersTab: React.FC = () => {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        const response = await fetch(`/api/users/${userId}`, {
+        const response = await fetch(`http://localhost:8000/api/users/${userId}`, {
           method: 'DELETE',
           headers
         })

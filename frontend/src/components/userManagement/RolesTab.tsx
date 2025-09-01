@@ -63,7 +63,7 @@ const RolesTab: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      const response = await fetch(`/api/roles?${params}`, { headers })
+              const response = await fetch(`http://localhost:8000/api/roles?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch roles')
@@ -106,7 +106,7 @@ const RolesTab: React.FC = () => {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        const response = await fetch(`/api/roles/${roleId}`, {
+        const response = await fetch(`http://localhost:8000/api/roles/${roleId}`, {
           method: 'DELETE',
           headers
         })

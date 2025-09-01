@@ -59,7 +59,7 @@ const PermissionsTab: React.FC = () => {
         headers['Authorization'] = `Bearer ${token}`
       }
 
-      const response = await fetch(`/api/permissions?${params}`, { headers })
+              const response = await fetch(`http://localhost:8000/api/permissions?${params}`, { headers })
       
       if (!response.ok) {
         throw new Error('Failed to fetch permissions')
@@ -103,7 +103,7 @@ const PermissionsTab: React.FC = () => {
           headers['Authorization'] = `Bearer ${token}`
         }
 
-        const response = await fetch(`/api/permissions/${permissionId}`, {
+        const response = await fetch(`http://localhost:8000/api/permissions/${permissionId}`, {
           method: 'DELETE',
           headers
         })

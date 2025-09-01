@@ -12,7 +12,9 @@ import {
   UserIcon,
   SparklesIcon,
   XMarkIcon,
-  CheckCircleIcon
+  CheckCircleIcon,
+  ServerIcon,
+  FolderIcon
 } from '@heroicons/react/24/outline'
 import { Document, DocumentType, DocumentStatus, Project } from '../types/index'
 import { DocumentGeneratorFactory } from '../services/documentGenerators'
@@ -1205,25 +1207,35 @@ const Documents: React.FC = () => {
               }
             </p>
 
-            {/* Navigation Test Buttons */}
-            <div className="mt-3 flex gap-2">
+            {/* Cross-Page Navigation */}
+            <div className="mt-4 flex flex-wrap gap-2">
               <button 
-                onClick={() => setSearchParams({ type: 'srs' }, { replace: true })}
-                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition-all duration-200"
+                onClick={() => window.location.href = '/srs'}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
               >
-                Test SRS
+                <DocumentTextIcon className="h-4 w-4" />
+                <span>Go to SRS</span>
               </button>
               <button 
-                onClick={() => setSearchParams({ type: 'sdd' }, { replace: true })}
-                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition-all duration-200"
+                onClick={() => window.location.href = '/sdd'}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
               >
-                Test SDD
+                <ServerIcon className="h-4 w-4" />
+                <span>Go to SDD</span>
               </button>
               <button 
-                onClick={() => setSearchParams({}, { replace: true })}
-                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1 rounded text-xs transition-all duration-200"
+                onClick={() => window.location.href = '/projects'}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
               >
-                Clear
+                <FolderIcon className="h-4 w-4" />
+                <span>View Projects</span>
+              </button>
+              <button 
+                onClick={() => window.location.href = '/templates'}
+                className="bg-white/20 hover:bg-white/30 text-white px-3 py-1.5 rounded-lg text-sm transition-all duration-200 flex items-center space-x-2"
+              >
+                <DocumentDuplicateIcon className="h-4 w-4" />
+                <span>Document Templates</span>
               </button>
             </div>
           </div>

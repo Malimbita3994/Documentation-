@@ -4,9 +4,9 @@ import {
   UsersIcon, 
   ShieldCheckIcon, 
   KeyIcon,
-  PlusIcon,
-  MagnifyingGlassIcon,
-  FunnelIcon
+  // PlusIcon,
+  // MagnifyingGlassIcon,
+  // FunnelIcon
 } from '@heroicons/react/24/outline'
 import UsersTab from '../components/userManagement/UsersTab'
 import RolesTab from '../components/userManagement/RolesTab'
@@ -62,9 +62,9 @@ const UserManagement: React.FC = () => {
       }
 
       const [usersResponse, rolesResponse, permissionsResponse] = await Promise.all([
-        fetch('/api/users/stats', { headers }),
-        fetch('/api/roles/stats', { headers }),
-        fetch('/api/permissions/stats', { headers })
+        fetch('http://localhost:8000/api/users/stats', { headers }),
+        fetch('http://localhost:8000/api/roles/stats', { headers }),
+        fetch('http://localhost:8000/api/permissions/stats', { headers })
       ])
 
       if (!usersResponse.ok || !rolesResponse.ok || !permissionsResponse.ok) {
@@ -164,7 +164,7 @@ const UserManagement: React.FC = () => {
       <div className="bg-white/80 backdrop-blur-sm rounded-lg border border-white/50 shadow-sm w-full max-w-full overflow-hidden">
         <Tab.Group selectedIndex={selectedTab} onChange={setSelectedTab}>
           <Tab.List className="flex space-x-1 p-4 border-b border-gray-200 w-full max-w-full overflow-hidden">
-            {tabs.map((tab, index) => (
+            {tabs.map((tab) => (
               <Tab
                 key={tab.name}
                 className={({ selected }) =>
@@ -181,8 +181,8 @@ const UserManagement: React.FC = () => {
             ))}
           </Tab.List>
           <Tab.Panels className="p-6 w-full max-w-full overflow-hidden">
-            {tabs.map((tab, index) => (
-              <Tab.Panel key={index} className="space-y-4 w-full max-w-full overflow-hidden">
+            {tabs.map((tab) => (
+              <Tab.Panel key={tab.name} className="space-y-4 w-full max-w-full overflow-hidden">
                 {tab.component}
               </Tab.Panel>
             ))}

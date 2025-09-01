@@ -15,6 +15,8 @@ import {
   ClockIcon,
   CheckCircleIcon
 } from '@heroicons/react/24/outline'
+import AITestComponent from '../components/AITestComponent'
+import TemplateTestComponent from '../components/TemplateTestComponent'
 
 const Dashboard: React.FC = () => {
   const stats = [
@@ -495,6 +497,12 @@ const Dashboard: React.FC = () => {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* AI Integration Test */}
+      <div className="mt-6">
+        <AITestComponent />
+        <TemplateTestComponent />
       </div>
     </div>
   )

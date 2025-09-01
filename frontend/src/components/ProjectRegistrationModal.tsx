@@ -7,7 +7,7 @@ interface ProjectRegistrationModalProps {
   onClose: () => void
   onSave: (project: any) => void
   project?: Project | null
-  mode: 'create' | 'edit'
+  mode: 'create' | 'edit' | 'view'
 }
 
 const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
@@ -41,29 +41,39 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
 
   const [isSubmitting, setIsSubmitting] = useState(false)
 
-  // Load project data when editing
+  // Load project data when editing or viewing
   useEffect(() => {
-    if (project && mode === 'edit') {
+    if (project && (mode === 'edit' || mode === 'view')) {
+      // Parse the description to extract the detailed information
+      const description = project.description || ''
+      
+      // Extract information from description (basic parsing)
+      const extractField = (text: string, field: string): string => {
+        const regex = new RegExp(`${field}:\\s*([^\\n]+)`, 'i')
+        const match = text.match(regex)
+        return match ? match[1].trim() : ''
+      }
+      
       setFormData({
-        name: project.name,
-        purpose: project.purpose,
-        scope: project.scope,
-        objectives: project.objectives.length > 0 ? project.objectives : [''],
-        stakeholders: project.stakeholders.length > 0 ? project.stakeholders : [''],
-        projectSponsor: project.projectSponsor,
-        budget: project.budget,
-        startDate: project.timeline.startDate,
-        endDate: project.timeline.endDate,
-        technologyStack: project.technologyStack.length > 0 ? project.technologyStack : [''],
-        deliverables: project.deliverables.length > 0 ? project.deliverables : [''],
-        successCriteria: project.successCriteria.length > 0 ? project.successCriteria : [''],
-        constraints: project.constraints.length > 0 ? project.constraints : [''],
-        dependencies: project.dependencies.length > 0 ? project.dependencies : [''],
-        qualityStandards: project.qualityStandards.length > 0 ? project.qualityStandards : [''],
-        securityRequirements: project.securityRequirements.length > 0 ? project.securityRequirements : [''],
-        changeManagement: project.changeManagement,
-        status: project.status,
-        manager: project.manager
+        name: project.name || '',
+        purpose: extractField(description, 'Purpose'),
+        scope: extractField(description, 'Scope'),
+        objectives: extractField(description, 'Objectives').split(',').filter(obj => obj.trim()) || [''],
+        stakeholders: extractField(description, 'Stakeholders').split(',').filter(stakeholder => stakeholder.trim()) || [''],
+        projectSponsor: extractField(description, 'Project Sponsor'),
+        budget: extractField(description, 'Budget'),
+        startDate: project.start_date || '',
+        endDate: project.end_date || '',
+        technologyStack: extractField(description, 'Technology Stack').split(',').filter(tech => tech.trim()) || [''],
+        deliverables: extractField(description, 'Deliverables').split(',').filter(del => del.trim()) || [''],
+        successCriteria: extractField(description, 'Success Criteria').split(',').filter(criteria => criteria.trim()) || [''],
+        constraints: extractField(description, 'Constraints').split(',').filter(constraint => constraint.trim()) || [''],
+        dependencies: extractField(description, 'Dependencies').split(',').filter(dep => dep.trim()) || [''],
+        qualityStandards: extractField(description, 'Quality Standards').split(',').filter(standard => standard.trim()) || [''],
+        securityRequirements: extractField(description, 'Security Requirements').split(',').filter(req => req.trim()) || [''],
+        changeManagement: extractField(description, 'Change Management'),
+        status: project.status || 'Planning',
+        manager: project.manager?.name || ''
       })
     } else if (mode === 'create') {
       // Reset form for new project
@@ -126,31 +136,45 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
     setIsSubmitting(true)
 
     try {
+      // Create a comprehensive description that includes all the detailed information
+      const description = `
+Purpose: ${formData.purpose}
+
+Scope: ${formData.scope}
+
+Objectives: ${formData.objectives.filter(obj => obj.trim()).join(', ')}
+
+Stakeholders: ${formData.stakeholders.filter(stakeholder => stakeholder.trim()).join(', ')}
+
+Project Sponsor: ${formData.projectSponsor}
+
+Budget: ${formData.budget}
+
+Technology Stack: ${formData.technologyStack.filter(tech => tech.trim()).join(', ')}
+
+Deliverables: ${formData.deliverables.filter(del => del.trim()).join(', ')}
+
+Success Criteria: ${formData.successCriteria.filter(criteria => criteria.trim()).join(', ')}
+
+Constraints: ${formData.constraints.filter(constraint => constraint.trim()).join(', ')}
+
+Dependencies: ${formData.dependencies.filter(dep => dep.trim()).join(', ')}
+
+Quality Standards: ${formData.qualityStandards.filter(standard => standard.trim()).join(', ')}
+
+Security Requirements: ${formData.securityRequirements.filter(req => req.trim()).join(', ')}
+
+Change Management: ${formData.changeManagement}
+      `.trim()
+
+      // Send only the fields that the backend expects
       const projectData = {
         name: formData.name,
-        purpose: formData.purpose,
-        scope: formData.scope,
-        objectives: formData.objectives.filter(obj => obj.trim()),
-        stakeholders: formData.stakeholders.filter(stakeholder => stakeholder.trim()),
-        projectSponsor: formData.projectSponsor,
-        budget: formData.budget,
-        timeline: {
-          startDate: formData.startDate,
-          endDate: formData.endDate,
-          milestones: []
-        },
-        technologyStack: formData.technologyStack.filter(tech => tech.trim()),
-        deliverables: formData.deliverables.filter(del => del.trim()),
-        successCriteria: formData.successCriteria.filter(criteria => criteria.trim()),
-        constraints: formData.constraints.filter(constraint => constraint.trim()),
-        dependencies: formData.dependencies.filter(dep => dep.trim()),
-        risks: [],
-        qualityStandards: formData.qualityStandards.filter(standard => standard.trim()),
-        securityRequirements: formData.securityRequirements.filter(req => req.trim()),
-        changeManagement: formData.changeManagement,
+        description: description,
         status: formData.status,
-        manager: formData.manager,
-        team: []
+        start_date: formData.startDate,
+        end_date: formData.endDate || null,
+        manager_id: 3 // Using the first available user as manager
       }
 
       await onSave(projectData)
@@ -171,10 +195,10 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
         <div className="flex items-center justify-between p-6 border-b border-gray-200">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
-              {mode === 'create' ? 'Project Registration' : 'Edit Project'}
+              {mode === 'create' ? 'Project Registration' : mode === 'edit' ? 'Edit Project' : 'Project Details'}
             </h2>
             <p className="text-gray-600 mt-1">
-              {mode === 'create' ? 'Create a new project with comprehensive details' : 'Update project information'}
+              {mode === 'create' ? 'Create a new project with comprehensive details' : mode === 'edit' ? 'Update project information' : 'View comprehensive project information'}
             </p>
           </div>
           <button
@@ -186,7 +210,7 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
         </div>
 
         {/* Content */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto max-h-[calc(90vh-120px)]">
+        <form onSubmit={mode === 'view' ? (e) => { e.preventDefault(); onClose(); } : handleSubmit} className="overflow-y-auto max-h-[calc(90vh-120px)]">
           <div className="p-6 space-y-6">
             
             {/* Basic Information */}
@@ -204,7 +228,8 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
                     required
                     value={formData.name}
                     onChange={(e) => handleInputChange('name', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    readOnly={mode === 'view'}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${mode === 'view' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     placeholder="e.g., Intelligent Documentation Automation Platform (IDAP)"
                   />
                 </div>
@@ -217,7 +242,8 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
                     required
                     value={formData.manager}
                     onChange={(e) => handleInputChange('manager', e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    readOnly={mode === 'view'}
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${mode === 'view' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     placeholder="e.g., John Doe"
                   />
                 </div>
@@ -229,8 +255,9 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
                     required
                     value={formData.purpose}
                     onChange={(e) => handleInputChange('purpose', e.target.value)}
+                    readOnly={mode === 'view'}
                     rows={3}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent ${mode === 'view' ? 'bg-gray-100 cursor-not-allowed' : ''}`}
                     placeholder="e.g., To automate SRS, SDD, and other documentation processes"
                   />
                 </div>
@@ -493,15 +520,17 @@ const ProjectRegistrationModal: React.FC<ProjectRegistrationModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
-              Cancel
+              {mode === 'view' ? 'Close' : 'Cancel'}
             </button>
-            <button
-              type="submit"
-              disabled={isSubmitting}
-              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isSubmitting ? (mode === 'create' ? 'Creating Project...' : 'Updating Project...') : (mode === 'create' ? 'Create Project' : 'Update Project')}
-            </button>
+            {mode !== 'view' && (
+              <button
+                type="submit"
+                disabled={isSubmitting}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isSubmitting ? (mode === 'create' ? 'Creating Project...' : 'Updating Project...') : (mode === 'create' ? 'Create Project' : 'Update Project')}
+              </button>
+            )}
           </div>
         </form>
       </div>

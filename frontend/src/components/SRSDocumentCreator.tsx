@@ -20,6 +20,8 @@ import {
   type SRSRequirement
 } from '../templates/SRSTemplate'
 import SRSDocumentViewer from './SRSDocumentViewer'
+import { aiService, DocumentGenerationContext } from '../services/aiService'
+import { knowledgeBaseService } from '../services/knowledgeBaseService'
 
 interface SRSDocumentCreatorProps {
   onClose: () => void
@@ -778,376 +780,84 @@ Performance:
      return content
    }
 
-   const autoPopulateSections = () => {
-     const updatedSections = sections.map(section => {
-       let newContent = section.content
-       
-       // Auto-populate based on section and available metadata
-       if (!section.content.trim()) {
-         switch (section.title) {
-           case '1.1 Purpose':
-             newContent = `This document provides a comprehensive Software Requirements Specification (SRS) for the ${metadata.systemName || '[System Name]'}. It describes the functional and non-functional requirements that the system must satisfy to meet the needs of stakeholders and users.
+     const autoPopulateSections = async () => {
+    try {
+      setIsGenerating(true)
+      
+      // Get industry context from metadata or default to general
+      const industry = metadata.industry || 'general'
+      
+      // Get knowledge base recommendations
+      const knowledgeBase = knowledgeBaseService.getDocumentTemplate('SRS', industry)
+      
+      // Create AI generation context
+      const aiContext: DocumentGenerationContext = {
+        documentType: 'SRS',
+        industry: industry,
+        requirements: requirements.map(r => `${r.title}: ${r.description}`).join('\n'),
+        additionalSpecs: metadata.systemScope || '',
+        projectContext: { 
+          projectName: metadata.projectName,
+          systemName: metadata.systemName,
+          systemPurpose: metadata.systemPurpose
+        },
+        standards: selectedStandards,
+        compliance: knowledgeBase.compliance
+      }
 
-The purpose of this SRS is to:
-• Define the functional and non-functional requirements for ${metadata.systemName || '[System Name]'}
-• Provide a basis for system design and development
-• Serve as a contract between stakeholders and development team
-• Enable system testing and validation
-• Support project planning and resource allocation
+      // Generate content for each empty section
+      const updatedSections = await Promise.all(sections.map(async (section) => {
+        if (section.content.trim()) {
+          return section // Skip sections that already have content
+        }
 
-This document follows ${selectedStandards.join(', ')} standards to ensure comprehensive coverage and industry best practices.`
-             break
-           case '1.2 Scope':
-             newContent = `This SRS covers the requirements for ${metadata.systemName || '[System Name]'} including its features, functions, and capabilities.
+        let newContent = section.content
+        
+        // Generate AI content based on section type
+        try {
+          const sectionPrompt = `Generate content for the SRS section "${section.title}" based on the following context:
 
-System Scope:
-${metadata.systemScope || '[System scope will be defined here]'}
+Project: ${metadata.projectName}
+System: ${metadata.systemName}
+Purpose: ${metadata.systemPurpose}
+Scope: ${metadata.systemScope}
+Standards: ${selectedStandards.join(', ')}
+Industry: ${industry}
 
-What the system will do:
-• ${requirements.filter(r => r.type === 'functional').slice(0, 3).map(r => r.title).join('\n• ') || 'Functional requirements will be defined in Section 3.2'}
-• Support user authentication and authorization
-• Provide data management and reporting capabilities
-• Enable system administration and configuration
+Requirements: ${requirements.map(r => `- ${r.title}: ${r.description}`).join('\n')}
 
-What the system will not do:
-• Replace existing enterprise systems (unless explicitly specified)
-• Handle hardware-level operations
-• Perform system-level maintenance tasks
+Please generate comprehensive, professional content for the "${section.title}" section that follows IEEE 830-1998 standards and includes industry best practices for ${industry}.`
 
-This document defines what the system will do and what it will not do, establishing clear boundaries for the development effort.`
-             break
-           case '1.3 Definitions, Acronyms, and Abbreviations':
-             newContent = `This section defines key terms, acronyms, and abbreviations used throughout this document.
+          const aiResponse = await aiService.generateContent({
+            prompt: sectionPrompt,
+            temperature: 0.3,
+            maxTokens: 1000
+          })
 
-Definitions:
-• SRS: Software Requirements Specification
-• System: The software application being specified
-• User: Any person who interacts with the system
-• Administrator: User with elevated privileges for system management
-• Stakeholder: Any person or organization with an interest in the system
+          newContent = aiResponse.content
+        } catch (error) {
+          console.error(`Error generating content for ${section.title}:`, error)
+          // Fallback to basic content
+          newContent = `Content for ${section.title} will be generated using AI. Please try again or fill manually.`
+        }
 
-Acronyms:
-• API: Application Programming Interface
-• UI: User Interface
-• UX: User Experience
-• DB: Database
-• HTTP: Hypertext Transfer Protocol
-• SSL: Secure Sockets Layer
-• TLS: Transport Layer Security
+        return { ...section, content: newContent }
+      }))
 
-Abbreviations:
-• req.: requirement
-• max.: maximum
-• min.: minimum
-• avg.: average
-• etc.: et cetera`
-             break
-           case '1.4 References':
-             newContent = `This section lists all documents and standards referenced in this SRS.
+      setSections(updatedSections)
+      
+      // Show success message
+      setTimeout(() => {
+        setIsGenerating(false)
+        // You can add a success notification here
+      }, 1000)
 
-Standards:
-${selectedStandards.map(standard => {
-  const std = internationalStandards.find(s => s.name === standard)
-  return `• ${standard}: ${std?.title || 'Standard reference'}`
-}).join('\n')}
-
-Project Documents:
-• Project Charter: ${metadata.projectCode || '[Project Code]'}
-• Business Requirements Document: [BRD Reference]
-• Stakeholder Analysis: [Stakeholder Analysis Reference]
-
-Technical References:
-• Web Development Standards: [Web Standards Reference]
-• Database Design Guidelines: [Database Standards Reference]
-• Security Standards: [Security Standards Reference]`
-             break
-           case '1.5 Overview':
-             newContent = `The remainder of this document is organized as follows:
-
-Section 2 - Overall Description: Provides a high-level overview of the system, including product perspective, functions, user classes, operating environment, and constraints.
-
-Section 3 - Specific Requirements: Details the functional and non-functional requirements, including:
-• 3.1 External Interface Requirements
-• 3.2 Functional Requirements (${requirements.filter(r => r.type === 'functional').length} requirements defined)
-• 3.3 Performance Requirements
-• 3.4 Design Constraints
-• 3.5 Software System Attributes
-
-Section 4 - Appendices: Contains additional information, diagrams, and supporting documentation.
-
-This document follows the IEEE 830-1998 standard structure to ensure comprehensive coverage of all requirements aspects.`
-             break
-           case '2.1 Product Perspective':
-             newContent = `The ${metadata.systemName || '[System Name]'} is part of a larger system architecture that includes:
-
-System Architecture Components:
-• User Interface Layer: Web-based frontend accessible via standard browsers
-• Application Layer: Business logic and processing components
-• Data Layer: Database systems and data storage solutions
-• Integration Layer: External system connections and APIs
-• Security Layer: Authentication, authorization, and data protection
-
-Integration Points:
-• Database Systems: ${requirements.filter(r => r.category.includes('Data') || r.category.includes('Database')).length > 0 ? 'Integrated with existing database infrastructure' : 'Will integrate with enterprise database systems'}
-• External APIs: ${requirements.filter(r => r.type === 'interface').length > 0 ? `${requirements.filter(r => r.type === 'interface').length} external interface requirements defined` : 'Will support RESTful API integrations'}
-• Authentication Systems: ${requirements.filter(r => r.title.toLowerCase().includes('auth') || r.title.toLowerCase().includes('login')).length > 0 ? 'Integrated with enterprise authentication' : 'Will integrate with enterprise authentication systems'}
-
-This section describes the system in the context of the larger system or product of which it is a part.`
-             break
-           case '2.2 Product Functions':
-             const functionalReqs = requirements.filter(r => r.type === 'functional')
-             newContent = `The ${metadata.systemName || '[System Name]'} will provide the following major functions:
-
-Core Functions:
-${functionalReqs.length > 0 ? functionalReqs.slice(0, 5).map(req => `• ${req.title}: ${req.description}`).join('\n') : `• User Authentication and Authorization: Secure login and role-based access control
-• Data Management: Create, read, update, and delete operations
-• Reporting and Analytics: Generate reports and data insights
-• System Administration: Configuration and maintenance capabilities
-• Integration Services: Connect with external systems and APIs`}
-
-Additional Functions:
-• User Management: User registration, profile management, and permissions
-• Data Validation: Input validation and data integrity checks
-• Audit Logging: Track user actions and system events
-• Backup and Recovery: Data protection and disaster recovery
-• Performance Monitoring: System health and performance tracking
-
-This section provides a summary of the major functions that the system will perform.`
-             break
-           case '2.3 User Classes and Characteristics':
-                           const userCategories: string[] = []
-             newContent = `The system will serve the following user classes:
-
-Primary User Classes:
-• End Users: Primary users who interact with the system daily
-  - Characteristics: Various technical skill levels, need intuitive interface
-  - Responsibilities: Data entry, report generation, system usage
-  - Access Level: Standard user permissions
-
-• System Administrators: Users responsible for system configuration and maintenance
-  - Characteristics: High technical expertise, system management skills
-  - Responsibilities: User management, system configuration, monitoring
-  - Access Level: Administrative privileges
-
-• Project Managers: Users who need reporting and oversight capabilities
-  - Characteristics: Business-focused, need comprehensive reporting
-  - Responsibilities: Project oversight, reporting, decision making
-  - Access Level: Manager-level permissions
-
-${userCategories.length > 0 ? `Additional Stakeholders:
-${userCategories.map(stakeholder => `• ${stakeholder}: Specific role-based access and capabilities`).join('\n')}` : ''}
-
-Each user class has specific characteristics, skill levels, and requirements that influence system design and functionality.`
-             break
-           case '2.4 Operating Environment':
-             newContent = `The system will operate in the following environment:
-
-Technical Environment:
-• Operating Systems: Windows 10/11, macOS 10.15+, Linux (Ubuntu 20.04+)
-• Web Browsers: Chrome 90+, Firefox 88+, Safari 14+, Edge 90+
-• Network: Internet and intranet connectivity, VPN support
-• Database: MySQL 8.0+, PostgreSQL 13+, or Microsoft SQL Server 2019+
-• Web Server: Apache 2.4+, Nginx 1.18+, or IIS 10+
-• Security: SSL/TLS 1.3 encryption, firewall protection, WAF
-
-Hardware Requirements:
-• Client: Modern web browser, 4GB RAM minimum, stable internet connection
-• Server: 8GB RAM minimum, 4 CPU cores, SSD storage
-• Network: 100Mbps minimum bandwidth, low latency connection
-
-Cloud Infrastructure (if applicable):
-• Cloud Platform: AWS, Azure, or Google Cloud Platform
-• Scalability: Auto-scaling capabilities for varying load
-• Availability: 99.9% uptime SLA, disaster recovery planning`
-             break
-           case '2.5 Design and Implementation Constraints':
-             newContent = `The following design constraints must be considered:
-
-Technical Constraints:
-• Technology Stack: Must use approved technologies and frameworks
-• Security Requirements: Must comply with enterprise security policies
-• Performance Requirements: Must meet specified response time and throughput targets
-• Scalability: Must support projected user growth and data volume
-
-Business Constraints:
-• Budget Constraints: Development and maintenance costs must be within budget
-• Timeline Constraints: Must be delivered within specified timeframe
-• Regulatory Compliance: Must meet industry-specific regulations
-• Integration Requirements: Must work with existing enterprise systems
-
-Implementation Constraints:
-• Development Team: Available skills and expertise
-• Infrastructure: Existing hardware and software limitations
-• Third-party Dependencies: Reliance on external systems and services
-• Maintenance: Ongoing support and update requirements`
-             break
-           case '2.6 User Documentation':
-             newContent = `The following user documentation will be provided with the system:
-
-User Documentation:
-• User Manual: Comprehensive guide for end users
-• Administrator Guide: System administration and configuration
-• API Documentation: Technical documentation for developers
-• Quick Start Guide: Getting started for new users
-• Troubleshooting Guide: Common issues and solutions
-
-Training Materials:
-• Video Tutorials: Step-by-step system usage videos
-• Training Manuals: Structured learning materials
-• Online Help: Context-sensitive help system
-• Knowledge Base: Searchable documentation and FAQs
-
-Documentation Standards:
-• Format: Web-based, printable PDF, and mobile-friendly versions
-• Language: Clear, concise, and user-friendly language
-• Updates: Regular updates to reflect system changes
-• Accessibility: Compliance with accessibility standards`
-             break
-           case '2.7 Assumptions and Dependencies':
-             newContent = `This section lists assumptions and dependencies that affect the requirements.
-
-Assumptions:
-• Users have basic computer literacy and internet access
-• Network connectivity will be available during system operation
-• Required third-party systems will be operational
-• Sufficient budget and resources are available for development
-• Stakeholders will provide timely feedback and approvals
-
-Dependencies:
-• Database System: ${requirements.filter(r => r.category.includes('Data') || r.category.includes('Database')).length > 0 ? 'Existing database infrastructure' : 'Database system availability'}
-• Authentication System: ${requirements.filter(r => r.title.toLowerCase().includes('auth')).length > 0 ? 'Enterprise authentication system' : 'Authentication service availability'}
-• Network Infrastructure: Stable network connectivity and bandwidth
-• Development Tools: Availability of required development and testing tools
-• Third-party Services: ${requirements.filter(r => r.type === 'interface').length > 0 ? 'External API and service availability' : 'External service dependencies'}
-
-Risk Mitigation:
-• Backup systems and redundancy planning
-• Alternative authentication methods
-• Offline functionality where possible
-• Regular dependency monitoring and updates`
-             break
-           case '3.1 External Interface Requirements':
-             newContent = `The system must support the following external interfaces:
-
-User Interfaces:
-• Web Interface: Responsive web application accessible via standard browsers
-• Mobile Interface: Mobile-optimized version for smartphones and tablets
-• API Interface: RESTful APIs for system integration
-• Admin Interface: Administrative dashboard for system management
-
-Hardware Interfaces:
-• Standard PC Hardware: Compatible with standard desktop and laptop configurations
-• Mobile Devices: Support for iOS and Android devices
-• Network Equipment: Compatible with standard network infrastructure
-• Storage Systems: Integration with enterprise storage solutions
-
-Software Interfaces:
-• Database Systems: ${requirements.filter(r => r.category.includes('Data')).length > 0 ? 'Integration with existing database systems' : 'Connection to enterprise database systems'}
-• Authentication Services: ${requirements.filter(r => r.title.toLowerCase().includes('auth')).length > 0 ? 'Integration with enterprise authentication' : 'Connection to authentication services'}
-• External APIs: ${requirements.filter(r => r.type === 'interface').length > 0 ? `${requirements.filter(r => r.type === 'interface').length} external API integrations` : 'Support for external API integrations'}
-• Reporting Tools: Integration with enterprise reporting and analytics tools
-
-Communication Interfaces:
-• HTTP/HTTPS: Secure web communication protocols
-• REST APIs: Standard RESTful API communication
-• Database Connections: Secure database connectivity
-• Email Integration: Email notification and communication services`
-             break
-           case '3.3 Performance Requirements':
-             const performanceReqs = requirements.filter(r => r.type === 'non-functional' && r.category.includes('Performance'))
-             newContent = `The system must meet the following performance requirements:
-
-Response Time Requirements:
-• Page Load Time: Maximum 2 seconds for 95% of page loads
-• API Response Time: Maximum 500ms for 90% of API calls
-• Database Query Time: Maximum 1 second for complex queries
-• Search Results: Maximum 3 seconds for search operations
-
-Throughput Requirements:
-• Concurrent Users: Support for ${performanceReqs.length > 0 ? performanceReqs[0].description.match(/\d+/)?.[0] || '100' : '100'}+ concurrent users
-• Transaction Rate: ${performanceReqs.length > 0 ? performanceReqs[0].description.match(/\d+/)?.[0] || '1000' : '1000'} transactions per minute
-• Data Processing: ${performanceReqs.length > 0 ? performanceReqs[0].description.match(/\d+/)?.[0] || '10' : '10'}MB per second data processing capability
-
-Availability Requirements:
-• System Uptime: 99.9% availability (8.76 hours downtime per year)
-• Maintenance Windows: Scheduled maintenance during off-peak hours
-• Disaster Recovery: Maximum 4 hours recovery time objective (RTO)
-• Data Backup: Maximum 1 hour recovery point objective (RPO)
-
-Scalability Requirements:
-• User Growth: Support 50% user growth without performance degradation
-• Data Growth: Handle 100% data volume increase
-• Geographic Expansion: Support multi-region deployment
-• Load Balancing: Automatic load distribution across servers`
-             break
-           case '3.4 Design Constraints':
-             newContent = `The following design constraints must be considered:
-
-Technical Constraints:
-• Technology Stack: Must use approved technologies and frameworks
-• Security Standards: Must comply with enterprise security policies
-• Performance Standards: Must meet specified performance benchmarks
-• Compatibility: Must work with existing enterprise systems
-
-Regulatory Constraints:
-• Data Protection: Compliance with GDPR, CCPA, or relevant regulations
-• Industry Standards: Adherence to industry-specific standards
-• Audit Requirements: Support for audit trails and compliance reporting
-• Privacy Laws: Compliance with privacy and data protection laws
-
-Business Constraints:
-• Budget Limitations: Development and maintenance costs within budget
-• Timeline Requirements: Delivery within specified project timeline
-• Resource Availability: Limited development team and infrastructure
-• Stakeholder Requirements: Meeting stakeholder expectations and needs
-
-Implementation Constraints:
-• Legacy System Integration: Compatibility with existing systems
-• Third-party Dependencies: Reliance on external services and APIs
-• Infrastructure Limitations: Hardware and network constraints
-• Maintenance Requirements: Ongoing support and update capabilities`
-             break
-           case '3.5 Software System Attributes':
-             newContent = `The system must exhibit the following attributes:
-
-Reliability:
-• Fault Tolerance: System continues operating despite component failures
-• Error Handling: Graceful handling of errors and exceptions
-• Data Integrity: Protection against data corruption and loss
-• Recovery Capability: Automatic recovery from failures
-
-Security:
-• Authentication: Secure user authentication and authorization
-• Data Protection: Encryption of sensitive data in transit and at rest
-• Access Control: Role-based access control and permissions
-• Audit Logging: Comprehensive audit trails for security events
-
-Maintainability:
-• Code Quality: Well-structured, documented, and maintainable code
-• Modularity: Modular architecture for easy updates and modifications
-• Documentation: Comprehensive technical and user documentation
-• Testing: Automated testing for quality assurance
-
-Usability:
-• User Interface: Intuitive and user-friendly interface design
-• Accessibility: Compliance with accessibility standards
-• Performance: Fast and responsive user experience
-• Error Messages: Clear and helpful error messages
-
-Performance:
-• Response Time: Fast system response times
-• Scalability: Ability to handle increased load
-• Efficiency: Optimal resource utilization
-• Monitoring: Real-time performance monitoring and alerting`
-             break
-         }
-       }
-       
-       return { ...section, content: newContent }
-     })
-     
-     setSections(updatedSections)
-   }
+    } catch (error) {
+      console.error('Error in auto-populate:', error)
+      setIsGenerating(false)
+      // You can add an error notification here
+    }
+  }
 
   const renderStep1 = () => (
     <div className="space-y-6">
@@ -1940,11 +1650,6 @@ What the system will not do:
 • Replace existing enterprise systems (unless explicitly specified)
 • Handle hardware-level operations
 • Perform system-level maintenance tasks
-• Process data outside of defined security boundaries
-• Operate without proper authentication and authorization
-
-${nonFunctionalReqs.length > 0 ? `Performance and Quality Requirements:
-${nonFunctionalReqs.slice(0, 3).map(req => `• ${req.title}: ${req.description}`).join('\n')}` : ''}
 
 This document defines what the system will do and what it will not do, establishing clear boundaries for the development effort.`
                       break
@@ -2054,10 +1759,19 @@ This document follows the IEEE 830-1998 standard structure to ensure comprehensi
               setSections(updatedSections)
               setTimeout(validateCurrentStep, 100) // Validate after state update
             }}
-            className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-3 rounded-lg font-medium transition-all duration-200 flex items-center gap-2"
           >
-            <SparklesIcon className="h-5 w-5" />
-            Auto-Populate Introduction
+            {isGenerating ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                Generating with AI...
+              </>
+            ) : (
+              <>
+                <SparklesIcon className="h-5 w-5" />
+                Auto-Populate Introduction
+              </>
+            )}
           </button>
         </div>
 

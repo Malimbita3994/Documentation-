@@ -18,6 +18,13 @@ class DocumentController extends Controller
     {
         $query = Document::with(['project', 'creator', 'lastModifier']);
 
+        // Include trashed if requested
+        if ($request->boolean('with_trashed')) {
+            $query->withTrashed();
+        } elseif ($request->boolean('only_trashed')) {
+            $query->onlyTrashed();
+        }
+
         // Filter by project
         if ($request->has('project_id')) {
             $query->where('project_id', $request->project_id);
@@ -48,6 +55,42 @@ class DocumentController extends Controller
                 'per_page' => $documents->perPage(),
                 'total' => $documents->total(),
             ],
+        ]);
+    }
+
+    /**
+     * Restore a soft-deleted document.
+     */
+    public function restore(int $id): JsonResponse
+    {
+        $document = Document::withTrashed()->findOrFail($id);
+        if (!$document->trashed()) {
+            return response()->json([
+                'message' => 'Document is not deleted',
+            ], 422);
+        }
+        $document->restore();
+        return response()->json([
+            'message' => 'Document restored successfully',
+            'data' => $document->fresh(['project', 'creator', 'lastModifier']),
+        ]);
+    }
+
+    /**
+     * Permanently delete a document.
+     */
+    public function forceDelete(int $id): JsonResponse
+    {
+        $document = Document::withTrashed()->findOrFail($id);
+        // Allow force delete only if currently soft-deleted or still draft
+        if (!$document->trashed() && !$document->isDraft()) {
+            return response()->json([
+                'message' => 'Only draft or trashed documents can be permanently deleted',
+            ], 422);
+        }
+        $document->forceDelete();
+        return response()->json([
+            'message' => 'Document permanently deleted',
         ]);
     }
 
@@ -158,13 +201,7 @@ class DocumentController extends Controller
      */
     public function destroy(Document $document): JsonResponse
     {
-        // Only allow deletion of draft documents
-        if (!$document->isDraft()) {
-            return response()->json([
-                'message' => 'Only draft documents can be deleted',
-            ], 422);
-        }
-
+        // Soft delete allowed for any document
         $document->delete();
 
         return response()->json([
@@ -251,6 +288,14 @@ class DocumentController extends Controller
         return $defaults;
     }
 }
+
+
+
+
+
+
+
+
 
 
 

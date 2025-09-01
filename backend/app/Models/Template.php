@@ -4,8 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Template extends Model
 {
@@ -13,102 +11,92 @@ class Template extends Model
 
     protected $fillable = [
         'name',
-        'type',
         'description',
-        'structure',
-        'is_default',
-        'is_custom',
-        'created_by',
-        'usage_count',
+        'category',
+        'file_path',
+        'file_name',
+        'file_size',
+        'file_type',
+        'content_type', // SRS, SDD, Test Cases, User Manual, Progress Report
+        'industry',
+        'standards',
+        'tags',
+        'is_active',
+        'uploaded_by',
+        'download_count',
+        'version'
     ];
 
     protected $casts = [
-        'structure' => 'array',
-        'is_default' => 'boolean',
-        'is_custom' => 'boolean',
+        'standards' => 'array',
+        'tags' => 'array',
+        'is_active' => 'boolean',
+        'download_count' => 'integer',
+        'version' => 'string'
     ];
 
-    public const TYPE_SRS = 'SRS';
-    public const TYPE_SDD = 'SDD';
-    public const TYPE_CONCEPT_NOTE = 'Concept Note';
-    public const TYPE_TEST_CASES = 'Test Cases';
-    public const TYPE_USER_MANUAL = 'User Manual';
-    public const TYPE_FEASIBILITY_STUDY = 'Feasibility Study';
-    public const TYPE_PROJECT_CHARTER = 'Project Charter';
-    public const TYPE_CUSTOM = 'Custom';
-
-    public static function getTypes(): array
+    public function user()
     {
-        return [
-            self::TYPE_SRS,
-            self::TYPE_SDD,
-            self::TYPE_CONCEPT_NOTE,
-            self::TYPE_TEST_CASES,
-            self::TYPE_USER_MANUAL,
-            self::TYPE_FEASIBILITY_STUDY,
-            self::TYPE_PROJECT_CHARTER,
-            self::TYPE_CUSTOM,
-        ];
+        return $this->belongsTo(User::class, 'uploaded_by');
     }
 
-    public function creator(): BelongsTo
+    public function getFileSizeFormattedAttribute()
     {
-        return $this->belongsTo(User::class, 'created_by');
+        $bytes = $this->file_size;
+        $units = ['B', 'KB', 'MB', 'GB'];
+        
+        for ($i = 0; $bytes > 1024 && $i < count($units) - 1; $i++) {
+            $bytes /= 1024;
+        }
+        
+        return round($bytes, 2) . ' ' . $units[$i];
     }
 
-    public function sections(): HasMany
+    public function getFileTypeIconAttribute()
     {
-        return $this->hasMany(TemplateSection::class);
+        switch (strtolower($this->file_type)) {
+            case 'docx':
+                return '📄';
+            case 'doc':
+                return '📄';
+            case 'pdf':
+                return '📕';
+            case 'txt':
+                return '📝';
+            case 'md':
+                return '📝';
+            default:
+                return '📁';
+        }
     }
 
-    public function isDefault(): bool
+    public function scopeActive($query)
     {
-        return $this->is_default;
+        return $query->where('is_active', true);
     }
 
-    public function isCustom(): bool
+    public function scopeByCategory($query, $category)
     {
-        return $this->is_custom;
+        return $query->where('category', $category);
     }
 
-    public function incrementUsageCount(): void
+    public function scopeByContentType($query, $contentType)
     {
-        $this->increment('usage_count');
+        return $query->where('content_type', $contentType);
     }
 
-    public function getStructureSections(): array
+    public function scopeByIndustry($query, $industry)
     {
-        return $this->structure['sections'] ?? [];
+        return $query->where('industry', $industry);
     }
 
-    public function getRequiredFields(): array
+    public function incrementDownloadCount()
     {
-        return $this->structure['required_fields'] ?? [];
-    }
-
-    public function getOptionalFields(): array
-    {
-        return $this->structure['optional_fields'] ?? [];
-    }
-
-    public function getValidationRules(): array
-    {
-        return $this->structure['validation_rules'] ?? [];
-    }
-
-    public function hasSection(string $sectionTitle): bool
-    {
-        $sections = $this->getStructureSections();
-        return collect($sections)->contains('title', $sectionTitle);
-    }
-
-    public function getSectionContent(string $sectionTitle): ?string
-    {
-        $sections = $this->getStructureSections();
-        $section = collect($sections)->firstWhere('title', $sectionTitle);
-        return $section['content_template'] ?? null;
+        $this->increment('download_count');
     }
 }
+
+
 
 
 

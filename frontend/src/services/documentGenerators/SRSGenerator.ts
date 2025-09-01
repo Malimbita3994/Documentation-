@@ -8,6 +8,8 @@ import {
   GenerationContext,
   DocumentStandard
 } from './types'
+import { aiService, DocumentGenerationContext as AIDocumentContext } from '../aiService'
+import { knowledgeBaseService } from '../knowledgeBaseService'
 
 export default class SRSGenerator extends BaseDocumentGenerator {
   constructor() {
@@ -82,53 +84,54 @@ export default class SRSGenerator extends BaseDocumentGenerator {
 
   async generateDocument(request: DocumentGenerationRequest): Promise<DocumentGenerationResult> {
     const startTime = Date.now()
-    console.log('Starting SRS document generation with enhanced IEEE 830 compliance...')
-
-    // Create generation context
-    const context: GenerationContext = {
-      request,
-      intermediateResults: new Map(),
-      metadata: {
-        generationTime: 0,
-        algorithmsUsed: ['NLP', 'RequirementExtraction', 'UseCaseGeneration', 'TraceabilityMatrix'],
-        sectionsGenerated: 0,
-        requirementsExtracted: 0,
-        confidence: 0,
-        warnings: [],
-        recommendations: []
-      },
-      errors: [],
-      warnings: []
-    }
+    console.log('Starting AI-powered SRS document generation with IEEE 830 compliance...')
 
     try {
-      // Execute the generation pipeline
-      const finalContext = await this.executePipeline(context)
+      // Get industry context from project or default to general
+      const industry = 'general' // This could be extracted from project context
       
-      // Extract requirements using advanced NLP
-      const requirements = await this.extractRequirements(request.systemRequirements)
+      // Get knowledge base recommendations
+      const knowledgeBase = knowledgeBaseService.getDocumentTemplate('SRS', industry)
       
-      // Generate comprehensive SRS content
-      const srsContent = await this.generateSRSContent(request, requirements, finalContext)
+      // Create AI generation context
+      const aiContext: AIDocumentContext = {
+        documentType: 'SRS',
+        industry: industry,
+        requirements: request.systemRequirements,
+        additionalSpecs: request.additionalSpecs,
+        projectContext: { projectId: request.projectId },
+        standards: knowledgeBase.compliance,
+        compliance: knowledgeBase.compliance
+      }
+
+      // Generate SRS content using AI
+      console.log('Generating SRS content with AI...')
+      const aiGeneratedContent = await aiService.generateSRS(aiContext)
+      
+      // Parse the AI-generated content into structured format
+      const parsedContent = this.parseAIContent(aiGeneratedContent)
+      
+      // Extract requirements using AI-enhanced analysis
+      const requirements = await this.extractRequirementsWithAI(request.systemRequirements)
       
       // Create traceability matrix
       const traceabilityMatrix = await this.createTraceabilityMatrix(requirements, request)
       
       // Calculate quality metrics
-      const qualityMetrics = this.calculateQualityMetrics(srsContent, requirements)
+      const qualityMetrics = this.calculateQualityMetrics(parsedContent, requirements)
       
       // Create the final document
       const document = {
         id: `srs_${Date.now()}`,
-        title: `${request.systemRequirements.split(' ').slice(0, 5).join(' ')} - SRS`,
+        title: `${this.extractSystemName(request.systemRequirements)} - Software Requirements Specification`,
         type: 'SRS' as DocumentType,
         projectId: request.projectId,
         status: 'Draft',
         version: '1.0.0',
         content: {
-          sections: srsContent.sections,
-          diagrams: srsContent.diagrams,
-          tables: srsContent.tables,
+          sections: parsedContent.sections,
+          diagrams: parsedContent.diagrams || [],
+          tables: parsedContent.tables || [],
           attachments: []
         },
         metadata: {
@@ -140,7 +143,8 @@ export default class SRSGenerator extends BaseDocumentGenerator {
           constraints: await this.extractConstraints(request.systemRequirements),
           references: [
             'IEEE Std 830-1998, IEEE Recommended Practice for Software Requirements Specifications',
-            'ISO/IEC/IEEE 29148:2018, Systems and software engineering - Life cycle processes - Requirements engineering'
+            'ISO/IEC/IEEE 29148:2018, Systems and software engineering - Life cycle processes - Requirements engineering',
+            ...knowledgeBase.compliance
           ],
           glossary: await this.generateGlossary(request.systemRequirements),
           acronyms: await this.extractAcronyms(request.systemRequirements)
@@ -149,7 +153,7 @@ export default class SRSGenerator extends BaseDocumentGenerator {
         updatedAt: new Date().toISOString(),
         createdBy: 'AI Generator',
         lastModifiedBy: 'AI Generator',
-        tags: ['SRS', 'Requirements', 'IEEE-830', 'AI-Generated'],
+        tags: ['SRS', 'Requirements', 'IEEE-830', 'AI-Generated', industry],
         requirements: requirements
       }
 
@@ -159,12 +163,12 @@ export default class SRSGenerator extends BaseDocumentGenerator {
         document: document as any,
         metadata: {
           generationTime,
-          algorithmsUsed: finalContext.metadata.algorithmsUsed,
-          sectionsGenerated: finalContext.metadata.sectionsGenerated,
-          requirementsExtracted: finalContext.metadata.requirementsExtracted,
-          confidence: finalContext.metadata.confidence,
-          warnings: finalContext.metadata.warnings,
-          recommendations: finalContext.metadata.recommendations
+          algorithmsUsed: ['AI-GPT4', 'NLP', 'RequirementExtraction', 'IEEE-830-Compliance'],
+          sectionsGenerated: parsedContent.sections.length,
+          requirementsExtracted: requirements.length,
+          confidence: qualityMetrics.overallScore,
+          warnings: qualityMetrics.issues.map(issue => issue.message),
+          recommendations: knowledgeBase.bestPractices
         },
         quality: qualityMetrics,
         traceability: traceabilityMatrix
@@ -237,6 +241,94 @@ export default class SRSGenerator extends BaseDocumentGenerator {
       ],
       validators: [],
       postProcessors: []
+    }
+  }
+
+  private parseAIContent(aiContent: string): any {
+    // Parse AI-generated content into structured format
+    const sections = []
+    const lines = aiContent.split('\n')
+    let currentSection = null
+    let currentContent = ''
+
+    for (const line of lines) {
+      if (line.startsWith('#') || line.startsWith('##')) {
+        // Save previous section
+        if (currentSection) {
+          currentSection.content = currentContent.trim()
+          sections.push(currentSection)
+        }
+        
+        // Start new section
+        const title = line.replace(/^#+\s*/, '').trim()
+        currentSection = {
+          id: title.toLowerCase().replace(/\s+/g, '-'),
+          title: title,
+          content: '',
+          level: line.startsWith('##') ? 2 : 1,
+          order: sections.length + 1
+        }
+        currentContent = ''
+      } else if (currentSection) {
+        currentContent += line + '\n'
+      }
+    }
+
+    // Add last section
+    if (currentSection) {
+      currentSection.content = currentContent.trim()
+      sections.push(currentSection)
+    }
+
+    return {
+      sections,
+      diagrams: [],
+      tables: []
+    }
+  }
+
+  private async extractRequirementsWithAI(text: string): Promise<any[]> {
+    // Use AI to extract requirements more intelligently
+    try {
+      // Create AI context for requirement extraction
+      const aiContext: AIDocumentContext = {
+        documentType: 'SRS',
+        industry: 'general',
+        requirements: text,
+        additionalSpecs: ''
+      }
+
+      // Use AI to extract requirements
+      const aiResponse = await aiService.generateContent({
+        prompt: `Extract and classify requirements from the following text. Return as JSON array with format:
+        [
+          {
+            "id": "REQ_1",
+            "type": "functional|non-functional|interface",
+            "category": "business|technical|quality",
+            "description": "requirement description",
+            "priority": "High|Medium|Low",
+            "source": "original text",
+            "testable": true/false,
+            "acceptanceCriteria": ["criteria1", "criteria2"]
+          }
+        ]
+        
+        Text: ${text}`,
+        temperature: 0.1,
+        maxTokens: 2000
+      })
+
+      try {
+        const requirements = JSON.parse(aiResponse.content)
+        return Array.isArray(requirements) ? requirements : []
+      } catch (parseError) {
+        console.warn('Failed to parse AI requirements, falling back to basic extraction')
+        return this.extractRequirements(text)
+      }
+    } catch (error) {
+      console.warn('AI requirement extraction failed, falling back to basic extraction')
+      return this.extractRequirements(text)
     }
   }
 

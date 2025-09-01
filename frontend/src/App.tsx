@@ -19,11 +19,13 @@ import UserManual from '@pages/UserManual'
 import UserManagement from '@pages/UserManagement'
 import UserProfile from '@pages/UserProfile'
 import Projects from '@pages/Projects'
+import QRCodeGenerator from '@pages/QRCodeGenerator'
 
 import Templates from '@pages/Templates'
 import Team from '@pages/Team'
 import Settings from '@pages/Settings'
 import Analytics from '@pages/Analytics'
+import Help from '@pages/Help'
 
 function App() {
   return (
@@ -57,11 +59,13 @@ function App() {
             <Route path="user-management" element={<UserManagement />} />
             <Route path="user-profile" element={<UserProfile />} />
             <Route path="projects" element={<Projects />} />
+            <Route path="qr-generator" element={<QRCodeGenerator />} />
 
             <Route path="templates" element={<Templates />} />
             <Route path="team" element={<Team />} />
             <Route path="settings" element={<Settings />} />
             <Route path="analytics" element={<Analytics />} />
+            <Route path="help" element={<Help />} />
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

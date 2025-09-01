@@ -42,7 +42,7 @@ const UserDetailsModal: React.FC<UserDetailsModalProps> = ({ user, onClose }) =>
   const fetchUserDetails = async () => {
     try {
       setLoading(true)
-      const response = await fetch(`/api/users/${user.id}`)
+              const response = await fetch(`http://localhost:8000/api/users/${user.id}`)
       const data = await response.json()
       setUserDetails(data.user)
     } catch (error) {

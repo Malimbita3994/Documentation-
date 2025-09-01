@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { XMarkIcon } from '@heroicons/react/24/outline'
 import { toast } from 'react-toastify'
+import { useAuth } from '../../contexts/AuthContext'
 
 interface User {
   id: number
@@ -24,6 +25,7 @@ interface UserModalProps {
 }
 
 const UserModal: React.FC<UserModalProps> = ({ user, onClose, onSave }) => {
+  const { token } = useAuth()
   const [formData, setFormData] = useState({
     name: '',
     username: '',
@@ -58,7 +60,8 @@ const UserModal: React.FC<UserModalProps> = ({ user, onClose, onSave }) => {
 
   const fetchRoles = async () => {
     try {
-      const response = await fetch('/api/roles')
+      const headers = { 'Authorization': `Bearer ${token}` }
+              const response = await fetch('http://localhost:8000/api/roles', { headers })
       const data = await response.json()
       setRoles(data.roles.data)
     } catch (error) {
@@ -120,18 +123,19 @@ const UserModal: React.FC<UserModalProps> = ({ user, onClose, onSave }) => {
 
     setLoading(true)
     try {
-      const url = isEditing ? `/api/users/${user.id}` : '/api/users'
+              const url = isEditing ? `http://localhost:8000/api/users/${user.id}` : 'http://localhost:8000/api/users'
       const method = isEditing ? 'PUT' : 'POST'
       
-      const submitData = { ...formData }
+      const submitData: any = { ...formData }
       if (isEditing && !submitData.password) {
-        // delete submitData.password
+        delete submitData.password
       }
 
       const response = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(submitData)
       })

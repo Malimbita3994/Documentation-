@@ -60,7 +60,7 @@ const RoleModal: React.FC<RoleModalProps> = ({ role, onClose, onSave }) => {
 
   const fetchPermissions = async () => {
     try {
-      const response = await fetch('/api/permissions/grouped')
+              const response = await fetch('http://localhost:8000/api/permissions/grouped')
       const data = await response.json()
       setGroupedPermissions(data.grouped_permissions)
       // setPermissions(data.grouped_permissions ? 

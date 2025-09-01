@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react'
 
 interface User {
   id: number
@@ -37,6 +37,15 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Check for existing token and user data on app load
   useEffect(() => {
+    // For development, let's keep the auth data but log it
+    if (process.env.NODE_ENV === 'development') {
+      console.log('Development mode: Checking authentication data')
+      const storedToken = localStorage.getItem('token')
+      const storedUser = localStorage.getItem('user')
+      console.log('Stored token:', storedToken ? 'Found' : 'Not found')
+      console.log('Stored user:', storedUser ? 'Found' : 'Not found')
+    }
+    
     const storedToken = localStorage.getItem('token')
     const storedUser = localStorage.getItem('user')
 
@@ -65,7 +74,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('http://localhost:8000/api/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -105,9 +114,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   }
 
-  const refreshUserData = async () => {
+  const refreshUserData = useCallback(async () => {
     try {
-      const response = await fetch('/api/auth/me')
+      const response = await fetch('http://localhost:8000/api/user', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          'Content-Type': 'application/json'
+        }
+      })
       if (response.ok) {
         const data = await response.json()
         setUser(data.user)
@@ -116,7 +130,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     } catch (error) {
       console.error('Error refreshing user data:', error)
     }
-  }
+  }, [])
 
   const value: AuthContextType = {
     user,
